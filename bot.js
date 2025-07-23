@@ -5,8 +5,8 @@ const AdmZip = require('adm-zip');
 const axios = require('axios');
 
 // Config
-const SESSION_FILE_ID = process.env.GDRIVE_SESSION_FILE_ID;
-const GDRIVE_ACCESS_TOKEN = process.env.GDRIVE_ACCESS_TOKEN;
+const SESSION_FILE_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
+const GDRIVE_ACCESS_TOKEN = process.env.DRIVE_API_KEY;
 const sessionFilePath = './auth_info.json';
 
 // Download ZIP session from Google Drive

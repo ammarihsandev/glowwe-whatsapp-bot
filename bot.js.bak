@@ -41,7 +41,7 @@ async function uploadSessionToDrive() {
     );
 }
 
-// Start the WhatsApp bot
+// Main bot function
 async function startBot() {
     await downloadSessionFromDrive();
 
@@ -53,13 +53,13 @@ async function startBot() {
         version,
     });
 
-    // Save credentials & upload to Drive on update
+    // Save updated credentials to Drive
     sock.ev.on('creds.update', async () => {
         saveState();
         await uploadSessionToDrive();
     });
 
-    // Handle connection
+    // Connection update
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect } = update;
         if (connection === 'close') {
@@ -67,11 +67,11 @@ async function startBot() {
             console.log('Connection closed. Reconnecting...', shouldReconnect);
             if (shouldReconnect) startBot();
         } else if (connection === 'open') {
-            console.log('✅ WhatsApp bot connected!');
+            console.log('✅ Bot connected');
         }
     });
 
-    // Handle incoming messages (optional)
+    // Incoming messages (optional)
     sock.ev.on('messages.upsert', async (msg) => {
         console.log('📩 Message received:', JSON.stringify(msg, null, 2));
     });
