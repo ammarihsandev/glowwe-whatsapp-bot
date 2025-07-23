@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",
-"@adiwajshing/baileys": "^6.3.0",
+    "@whiskeysockets/baileys": "^6.7.18",
     "adm-zip": "^0.5.16",
     "dotenv": "^17.2.0",
     "googleapis": "^132.0.0",
