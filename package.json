@@ -7,7 +7,7 @@
     "start": "node main.js"
   },
   "dependencies": {
-    "@adiwajshing/baileys": "^6.6.0",
+    "@adiwajshing/baileys": "6.5.0",
     "axios": "^1.6.8",
     "mime-types": "^2.1.35",
     "googleapis": "^134.0.0",
