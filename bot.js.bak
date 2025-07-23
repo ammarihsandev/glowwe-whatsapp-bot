@@ -5,12 +5,15 @@ const pino = require('pino');
 
 async function startBot({ sessionPath, onClose }) {
   const logger = pino({ level: 'silent' });
-  const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+  const sessionDir = path.resolve(sessionPath);
+  console.log(`📁 Using session directory: ${sessionDir}`);
+
+  const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
 
   const sock = makeWASocket({
     logger,
-    printQRInTerminal: true,
     auth: state,
+    browser: ['GlowweBot', 'Chrome', '1.0.0'],
   });
 
   sock.ev.on('messages.upsert', async ({ messages }) => {
@@ -29,7 +32,16 @@ async function startBot({ sessionPath, onClose }) {
   sock.ev.on('creds.update', saveCreds);
 
   sock.ev.on('connection.update', async (update) => {
-    const { connection, lastDisconnect } = update;
+    const { connection, lastDisconnect, qr } = update;
+
+    if (qr) {
+      console.log('📸 Please scan this QR to login:\n');
+      console.log(qr);
+    }
+
+    if (connection === 'open') {
+      console.log('✅ Bot is now connected and ready!');
+    }
 
     if (connection === 'close') {
       const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
@@ -38,12 +50,8 @@ async function startBot({ sessionPath, onClose }) {
       if (shouldReconnect) {
         startBot({ sessionPath, onClose }); // reconnect
       } else {
-        if (onClose) await onClose(); // upload session then exit
+        if (onClose) await onClose(); // e.g. upload session, then exit
       }
-    }
-
-    if (connection === 'open') {
-      console.log('✅ Bot is now connected and ready!');
     }
   });
 }

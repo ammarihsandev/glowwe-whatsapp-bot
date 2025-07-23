@@ -5,38 +5,21 @@ const pino = require('pino');
 
 async function startBot({ sessionPath, onClose }) {
   const logger = pino({ level: 'silent' });
-  const sessionDir = path.resolve(sessionPath);
-  console.log(`📁 Using session directory: ${sessionDir}`);
-
-  const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+  const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
 
   const sock = makeWASocket({
     logger,
     auth: state,
-    browser: ['GlowweBot', 'Chrome', '1.0.0'],
+    printQRInTerminal: false, // Disable printing to terminal
   });
 
-  sock.ev.on('messages.upsert', async ({ messages }) => {
-    const msg = messages[0];
-    if (!msg.message || msg.key.fromMe) return;
-
-    const from = msg.key.remoteJid;
-    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
-    console.log(`📩 Message from: ${from} | ${text}`);
-
-    if (text.toLowerCase() === 'ping') {
-      await sock.sendMessage(from, { text: 'pong ✅' });
-    }
-  });
-
-  sock.ev.on('creds.update', saveCreds);
-
+  // ✅ Show QR code as link
   sock.ev.on('connection.update', async (update) => {
-    const { connection, lastDisconnect, qr } = update;
+    const { connection, qr, lastDisconnect } = update;
 
     if (qr) {
-      console.log('📸 Please scan this QR to login:\n');
-      console.log(qr);
+      const qrURL = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`;
+      console.log(`\n📲 Scan your WhatsApp QR here:\n${qrURL}\n`);
     }
 
     if (connection === 'open') {
@@ -48,10 +31,25 @@ async function startBot({ sessionPath, onClose }) {
       console.log(`📴 Connection closed. Reconnect? ${shouldReconnect}`);
 
       if (shouldReconnect) {
-        startBot({ sessionPath, onClose }); // reconnect
+        startBot({ sessionPath, onClose });
       } else {
-        if (onClose) await onClose(); // e.g. upload session, then exit
+        if (onClose) await onClose();
       }
+    }
+  });
+
+  sock.ev.on('creds.update', saveCreds);
+
+  sock.ev.on('messages.upsert', async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg.message || msg.key.fromMe) return;
+
+    const from = msg.key.remoteJid;
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+    console.log(`📩 Message from: ${from} | ${text}`);
+
+    if (text.toLowerCase() === 'ping') {
+      await sock.sendMessage(from, { text: 'pong ✅' });
     }
   });
 }
