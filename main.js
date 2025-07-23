@@ -1,6 +1,6 @@
 const path = require('path');
 const { uploadSession, downloadSession } = require('./drive');
-const { startBot } = require('./bot');
+const { startBot } = require('./bot.js');
 
 const SESSION_FOLDER = path.join(__dirname, 'session');
 const DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;

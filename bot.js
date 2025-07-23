@@ -1,33 +1,80 @@
-const { uploadSession } = require('./main'); // make sure path is correct
+const { default: makeWASocket, useSingleFileAuthState, fetchLatestBaileysVersion, DisconnectReason } = require('@whiskeysockets/baileys');
+const fs = require('fs');
+const path = require('path');
+const AdmZip = require('adm-zip');
+const axios = require('axios');
 
-const SESSION_PATH = './session';
-const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
+// Config
+const SESSION_FILE_ID = process.env.GDRIVE_SESSION_FILE_ID;
+const GDRIVE_ACCESS_TOKEN = process.env.GDRIVE_ACCESS_TOKEN;
+const sessionFilePath = './auth_info.json';
 
-sock.ev.on('connection.update', async (update) => {
-  const { connection, lastDisconnect } = update;
+// Download ZIP session from Google Drive
+async function downloadSessionFromDrive() {
+    const url = `https://www.googleapis.com/drive/v3/files/${SESSION_FILE_ID}?alt=media`;
+    const response = await axios.get(url, {
+        headers: {
+            Authorization: `Bearer ${GDRIVE_ACCESS_TOKEN}`,
+        },
+        responseType: 'arraybuffer',
+    });
 
-  if (connection === 'open') {
-    console.log('✅ Bot is now connected and ready!');
+    const zip = new AdmZip(response.data);
+    zip.extractAllTo('./', true);
+}
 
-    // Upload session after successful connection
-    try {
-      await uploadSession(SESSION_PATH, FOLDER_ID);
-      console.log('💾 Session uploaded after login.');
-    } catch (err) {
-      console.error('❌ Failed to upload session after login:', err.message);
-    }
-  }
+// Upload session ZIP to Google Drive
+async function uploadSessionToDrive() {
+    const zip = new AdmZip();
+    zip.addLocalFile(sessionFilePath);
+    const buffer = zip.toBuffer();
 
-  if (connection === 'close') {
-    const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-    console.log('📴 Connection closed. Reconnect?', shouldReconnect);
+    await axios.patch(
+        `https://www.googleapis.com/upload/drive/v3/files/${SESSION_FILE_ID}?uploadType=media`,
+        buffer,
+        {
+            headers: {
+                Authorization: `Bearer ${GDRIVE_ACCESS_TOKEN}`,
+                'Content-Type': 'application/zip',
+            },
+        }
+    );
+}
 
-    // Optional: Upload on disconnect too
-    try {
-      await uploadSession(SESSION_PATH, FOLDER_ID);
-      console.log('💾 Session uploaded on disconnect.');
-    } catch (err) {
-      console.error('❌ Failed to upload session on disconnect:', err.message);
-    }
-  }
-});
+// Main bot function
+async function startBot() {
+    await downloadSessionFromDrive();
+
+    const { state, saveState } = useSingleFileAuthState(sessionFilePath);
+    const { version } = await fetchLatestBaileysVersion();
+
+    const sock = makeWASocket({
+        auth: state,
+        version,
+    });
+
+    // Save updated credentials to Drive
+    sock.ev.on('creds.update', async () => {
+        saveState();
+        await uploadSessionToDrive();
+    });
+
+    // Connection update
+    sock.ev.on('connection.update', (update) => {
+        const { connection, lastDisconnect } = update;
+        if (connection === 'close') {
+            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            console.log('Connection closed. Reconnecting...', shouldReconnect);
+            if (shouldReconnect) startBot();
+        } else if (connection === 'open') {
+            console.log('✅ Bot connected');
+        }
+    });
+
+    // Incoming messages (optional)
+    sock.ev.on('messages.upsert', async (msg) => {
+        console.log('📩 Message received:', JSON.stringify(msg, null, 2));
+    });
+}
+
+startBot();
