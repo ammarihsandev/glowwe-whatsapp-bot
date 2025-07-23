@@ -2,7 +2,7 @@ const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
-const CREDENTIALS = process.env.GOOGLE_SERVICE_ACCOUNT; // Make sure this path is correct
+const CREDENTIALS = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT); // Make sure this path is correct
 
 // The ID of your Google Shared Drive folder
 const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
