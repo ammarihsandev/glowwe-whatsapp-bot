@@ -13,7 +13,8 @@ const { downloadSessionFromDrive } = require('./drive');
   }
 
   const authPath = './auth_info_baileys/creds.json';
-  const { state, saveState } = useSingleFileAuthState(authPath);
+  const { state, saveCreds } = await useMultiFileAuthState(authPath);
+
 
   const sock = makeWASocket({
     auth: state,
