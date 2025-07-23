@@ -2,35 +2,36 @@ const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
-const CREDENTIALS = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT); // Make sure this path is correct
+
+// Parse the service account credentials from environment variable
+const CREDENTIALS = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
 // The ID of your Google Shared Drive folder
 const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-// Use GoogleAuth with the Service Account credentials for authentication
+// Authenticate with Google Drive using service account
 const auth = new google.auth.GoogleAuth({
   credentials: CREDENTIALS,
   scopes: ['https://www.googleapis.com/auth/drive'],
 });
 
 async function getDriveClient() {
-  return google.drive({ version: 'v3', auth: await auth.getClient() });
+  const client = await auth.getClient();
+  return google.drive({ version: 'v3', auth: client });
 }
 
-// =========================================================
-// Functions for Downloading Session from Drive
-// =========================================================
-
+// ================================
+// DOWNLOAD SESSION
+// ================================
 async function downloadSession(folderId, outputDir) {
   try {
-    const driveClient = await getDriveClient();
+    const drive = await getDriveClient();
 
-    // Buat folder output kalau belum ada
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    const { data } = await driveClient.files.list({
+    const { data } = await drive.files.list({
       q: `'${folderId}' in parents and name='session.zip' and trashed=false`,
       fields: 'files(id, name)',
       supportsAllDrives: true,
@@ -46,15 +47,15 @@ async function downloadSession(folderId, outputDir) {
     const zipPath = path.join(outputDir, 'session.zip');
     const dest = fs.createWriteStream(zipPath);
 
-    const res = await driveClient.files.get(
-      { fileId: fileId, alt: 'media', supportsAllDrives: true },
+    const res = await drive.files.get(
+      { fileId, alt: 'media', supportsAllDrives: true },
       { responseType: 'stream' }
     );
 
     await new Promise((resolve, reject) => {
       res.data
-        .on('end', () => resolve())
-        .on('error', err => {
+        .on('end', resolve)
+        .on('error', (err) => {
           console.error('❌ Error downloading file stream:', err);
           reject(err);
         })
@@ -69,29 +70,26 @@ async function downloadSession(folderId, outputDir) {
     console.log('✅ Session unzipped successfully.');
 
     return true;
-  } catch (error) {
-    console.error('❌ Error in downloadSession:', error.message);
+  } catch (err) {
+    console.error('❌ Error in downloadSession:', err.message);
     return false;
   }
 }
 
-// =========================================================
-// Functions for Uploading Session to Drive
-// =========================================================
-
-async function uploadSession(folderPath, driveFolderId) {
+// ================================
+// UPLOAD SESSION
+// ================================
+async function uploadSession(folderPath, folderId) {
   try {
-    const driveClient = await getDriveClient();
+    const drive = await getDriveClient();
     const zipPath = path.join(__dirname, 'session.zip');
-    
-    // Create the zip file from the session folder
+
     const zip = new AdmZip();
-    zip.addLocalFolder(folderPath); // Use addLocalFolder for a directory
+    zip.addLocalFolder(folderPath);
     zip.writeZip(zipPath);
-    
-    // Find and delete any old session file
-    const { data } = await driveClient.files.list({
-      q: `'${driveFolderId}' in parents and name='session.zip' and trashed=false`,
+
+    const { data } = await drive.files.list({
+      q: `'${folderId}' in parents and name='session.zip' and trashed=false`,
       fields: 'files(id, name)',
       supportsAllDrives: true,
       includeItemsFromAllDrives: true,
@@ -99,18 +97,17 @@ async function uploadSession(folderPath, driveFolderId) {
 
     if (data.files.length > 0) {
       console.log('🔄 Found old session.zip on Drive. Deleting...');
-      await driveClient.files.delete({ 
+      await drive.files.delete({
         fileId: data.files[0].id,
         supportsAllDrives: true,
       });
       console.log('✅ Old session.zip deleted.');
     }
-    
-    // Upload the new zip file
-    const res = await driveClient.files.create({
+
+    const res = await drive.files.create({
       resource: {
         name: 'session.zip',
-        parents: [driveFolderId],
+        parents: [folderId],
       },
       media: {
         mimeType: 'application/zip',
@@ -118,20 +115,18 @@ async function uploadSession(folderPath, driveFolderId) {
       },
       supportsAllDrives: true,
     });
-    
-    fs.unlinkSync(zipPath); // Clean up the local zip file
+
+    fs.unlinkSync(zipPath);
     console.log(`✅ Session uploaded to Google Drive. File ID: ${res.data.id}`);
-    
+
     return res.data.id;
-  } catch (error) {
-    console.error('❌ Error in uploadSession:', error.message);
+  } catch (err) {
+    console.error('❌ Error in uploadSession:', err.message);
     return null;
   }
 }
 
-// =========================================================
-// Export the functions
-// =========================================================
-
-module.exports = { uploadSession, downloadSession };
-
+module.exports = {
+  uploadSession,
+  downloadSession,
+};

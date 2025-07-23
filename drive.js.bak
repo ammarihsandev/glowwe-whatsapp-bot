@@ -24,15 +24,19 @@ async function getDriveClient() {
 async function downloadSession(folderId, outputDir) {
   try {
     const driveClient = await getDriveClient();
-    
-    // Find the session.zip file in the specified folder
+
+    // Buat folder output kalau belum ada
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
     const { data } = await driveClient.files.list({
       q: `'${folderId}' in parents and name='session.zip' and trashed=false`,
       fields: 'files(id, name)',
       supportsAllDrives: true,
       includeItemsFromAllDrives: true,
     });
-    
+
     if (!data.files.length) {
       console.log('❌ session.zip not found in Drive');
       return false;
@@ -40,11 +44,8 @@ async function downloadSession(folderId, outputDir) {
 
     const fileId = data.files[0].id;
     const zipPath = path.join(outputDir, 'session.zip');
-    
-    // Create a write stream to save the file
     const dest = fs.createWriteStream(zipPath);
-    
-    // Download the file from Drive
+
     const res = await driveClient.files.get(
       { fileId: fileId, alt: 'media', supportsAllDrives: true },
       { responseType: 'stream' }
@@ -62,10 +63,9 @@ async function downloadSession(folderId, outputDir) {
 
     console.log('✅ session.zip downloaded successfully.');
 
-    // Unzip the downloaded file
     const zip = new AdmZip(zipPath);
     zip.extractAllTo(outputDir, true);
-    fs.unlinkSync(zipPath); // Clean up the zip file
+    fs.unlinkSync(zipPath);
     console.log('✅ Session unzipped successfully.');
 
     return true;
