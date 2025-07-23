@@ -3,13 +3,11 @@ const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
 
-// Parse the service account credentials from environment variable
+// Parse service account credentials from environment variables
 const CREDENTIALS = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
-
-// The ID of your Google Shared Drive folder
 const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-// Authenticate with Google Drive using service account
+// Auth setup
 const auth = new google.auth.GoogleAuth({
   credentials: CREDENTIALS,
   scopes: ['https://www.googleapis.com/auth/drive'],
@@ -96,17 +94,27 @@ async function uploadSession(folderPath, folderId) {
     });
 
     if (data.files.length > 0) {
-      console.log('🔄 Found old session.zip on Drive. Deleting...');
+      const oldFileId = data.files[0].id;
+      console.log(`🔄 Found old session.zip on Drive. File ID: ${oldFileId}`);
+
       try {
-        await drive.files.delete({
-          fileId: data.files[0].id,
+        await drive.files.get({
+          fileId: oldFileId,
+          fields: 'id',
           supportsAllDrives: true,
         });
+
+        await drive.files.delete({
+          fileId: oldFileId,
+          supportsAllDrives: true,
+        });
+
         console.log('✅ Old session.zip deleted.');
       } catch (err) {
         if (err.errors?.[0]?.reason === 'notFound') {
           console.warn('⚠️ session.zip already deleted or not found, skipping deletion.');
         } else {
+          console.error('❌ Unexpected error during file deletion:', err.message);
           throw err;
         }
       }
@@ -134,7 +142,26 @@ async function uploadSession(folderPath, folderId) {
   }
 }
 
+// ================================
+// DEBUG: List All Files (Optional)
+// ================================
+async function listAllFiles(folderId) {
+  const drive = await getDriveClient();
+  const res = await drive.files.list({
+    q: `'${folderId}' in parents and trashed=false`,
+    fields: 'files(id, name)',
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+  });
+
+  console.log('📂 Files in Google Drive folder:');
+  res.data.files.forEach(file => {
+    console.log(`- ${file.name} (${file.id})`);
+  });
+}
+
 module.exports = {
   uploadSession,
   downloadSession,
+  listAllFiles, // Optional for debugging
 };
