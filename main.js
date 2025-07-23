@@ -1,42 +1,54 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useSingleFileAuthState, DisconnectReason } = require('@adiwajshing/baileys');
 const { Boom } = require('@hapi/boom');
-const qrcode = require('qrcode-terminal');
+const path = require('path');
+const fs = require('fs');
 
-async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState('./auth_info');
+const { downloadSessionFromDrive } = require('./drive');
+
+// Jalankan saat startup
+(async () => {
+  const success = await downloadSessionFromDrive();
+  if (!success) {
+    console.log('🔁 Tidak ada session tersimpan, akan minta scan QR...');
+  }
+
+  const authPath = './auth_info_baileys/creds.json';
+  const { state, saveState } = useSingleFileAuthState(authPath);
 
   const sock = makeWASocket({
     auth: state,
-    // printQRInTerminal: true, // ❌ Hapus yang ini, sudah deprecated
+    printQRInTerminal: true,
   });
 
-  sock.ev.on('creds.update', saveCreds);
+  sock.ev.on('creds.update', saveState);
 
   sock.ev.on('connection.update', (update) => {
-    const { connection, lastDisconnect, qr } = update;
-
-    if (qr) {
-      console.log('🔑 Scan QR Code below to log in:');
-      qrcode.generate(qr, { small: true });
-    }
-
+    const { connection, lastDisconnect } = update;
     if (connection === 'close') {
-      const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-      console.log('Connection closed. Reconnecting?', shouldReconnect);
-      if (shouldReconnect) {
-        startBot();
+      const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
+      if (reason === DisconnectReason.loggedOut) {
+        console.log('❌ Logged out. Session dihapus.');
+        fs.rmSync('./auth_info_baileys', { recursive: true, force: true });
+      } else {
+        console.log('🔁 Connection closed. Trying to reconnect...');
+        process.exit(1); // Railway akan restart container
       }
     } else if (connection === 'open') {
-      console.log('✅ Bot connected');
+      console.log('✅ Connected to WhatsApp');
     }
   });
 
-  sock.ev.on('messages.upsert', ({ messages }) => {
-    const msg = messages[0];
-    if (!msg.key.fromMe && msg.message?.conversation) {
-      console.log(`📩 New message from ${msg.key.remoteJid}: ${msg.message.conversation}`);
+  sock.ev.on('messages.upsert', async (msg) => {
+    const message = msg.messages[0];
+    if (!message.message) return;
+
+    const sender = message.key.remoteJid;
+    const text = message.message.conversation || message.message.extendedTextMessage?.text;
+
+    console.log('📩 Message from:', sender, '|', text);
+
+    if (text?.toLowerCase() === 'hi') {
+      await sock.sendMessage(sender, { text: 'Hello from Railway bot 👋' });
     }
   });
-}
-
-startBot();
+})();
