@@ -97,11 +97,19 @@ async function uploadSession(folderPath, folderId) {
 
     if (data.files.length > 0) {
       console.log('🔄 Found old session.zip on Drive. Deleting...');
-      await drive.files.delete({
-        fileId: data.files[0].id,
-        supportsAllDrives: true,
-      });
-      console.log('✅ Old session.zip deleted.');
+      try {
+        await drive.files.delete({
+          fileId: data.files[0].id,
+          supportsAllDrives: true,
+        });
+        console.log('✅ Old session.zip deleted.');
+      } catch (err) {
+        if (err.errors?.[0]?.reason === 'notFound') {
+          console.warn('⚠️ session.zip already deleted or not found, skipping deletion.');
+        } else {
+          throw err;
+        }
+      }
     }
 
     const res = await drive.files.create({
