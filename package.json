@@ -12,9 +12,10 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.18",
-    "adm-zip": "^0.5.9",
-    "googleapis": "^129.0.0"
-  }
+ "dependencies": {
+  "@whiskeysockets/baileys": "^6.7.18",
+  "adm-zip": "^0.5.9",
+  "googleapis": "^129.0.0",
+  "@hapi/boom": "^9.1.4" // The version number might be different
+}
 }
