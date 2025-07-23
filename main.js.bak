@@ -1,4 +1,8 @@
-const { default: makeWASocket, useSingleFileAuthState, DisconnectReason } = require('@adiwajshing/baileys');
+const {
+  default: makeWASocket,
+  useSingleFileAuthState
+} = require('@adiwajshing/baileys');
+
 const { Boom } = require('@hapi/boom');
 const path = require('path');
 const fs = require('fs');
