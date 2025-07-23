@@ -1,57 +1,33 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
-const fs = require('fs');
-const path = require('path');
-const pino = require('pino');
+const { uploadSession } = require('./main'); // make sure path is correct
 
-async function startBot({ sessionPath, onClose }) {
-  const logger = pino({ level: 'silent' });
-  const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+const SESSION_PATH = './session';
+const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-  const sock = makeWASocket({
-    logger,
-    auth: state,
-    printQRInTerminal: false, // Disable printing to terminal
-  });
+sock.ev.on('connection.update', async (update) => {
+  const { connection, lastDisconnect } = update;
 
-  // ✅ Show QR code as link
-  sock.ev.on('connection.update', async (update) => {
-    const { connection, qr, lastDisconnect } = update;
+  if (connection === 'open') {
+    console.log('✅ Bot is now connected and ready!');
 
-    if (qr) {
-      const qrURL = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qr)}`;
-      console.log(`\n📲 Scan your WhatsApp QR here:\n${qrURL}\n`);
+    // Upload session after successful connection
+    try {
+      await uploadSession(SESSION_PATH, FOLDER_ID);
+      console.log('💾 Session uploaded after login.');
+    } catch (err) {
+      console.error('❌ Failed to upload session after login:', err.message);
     }
+  }
 
-    if (connection === 'open') {
-      console.log('✅ Bot is now connected and ready!');
+  if (connection === 'close') {
+    const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+    console.log('📴 Connection closed. Reconnect?', shouldReconnect);
+
+    // Optional: Upload on disconnect too
+    try {
+      await uploadSession(SESSION_PATH, FOLDER_ID);
+      console.log('💾 Session uploaded on disconnect.');
+    } catch (err) {
+      console.error('❌ Failed to upload session on disconnect:', err.message);
     }
-
-    if (connection === 'close') {
-      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-      console.log(`📴 Connection closed. Reconnect? ${shouldReconnect}`);
-
-      if (shouldReconnect) {
-        startBot({ sessionPath, onClose });
-      } else {
-        if (onClose) await onClose();
-      }
-    }
-  });
-
-  sock.ev.on('creds.update', saveCreds);
-
-  sock.ev.on('messages.upsert', async ({ messages }) => {
-    const msg = messages[0];
-    if (!msg.message || msg.key.fromMe) return;
-
-    const from = msg.key.remoteJid;
-    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
-    console.log(`📩 Message from: ${from} | ${text}`);
-
-    if (text.toLowerCase() === 'ping') {
-      await sock.sendMessage(from, { text: 'pong ✅' });
-    }
-  });
-}
-
-module.exports = { startBot };
+  }
+});
