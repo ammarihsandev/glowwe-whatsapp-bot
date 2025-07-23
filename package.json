@@ -1,29 +1,20 @@
 {
   "name": "glowwe-whatsapp-bot",
   "version": "1.0.0",
-  "description": "Self-hosted WhatsApp bot using Baileys, Google Drive session storage",
-  "main": "main.js",
+  "description": "",
+  "main": "index.js",
   "scripts": {
     "start": "node main.js"
   },
-  "dependencies": {
-  "@whiskeysockets/baileys": "^6.5.0",
-    "axios": "^1.6.8",
-    "mime-types": "^2.1.35",
-    "googleapis": "^134.0.0",
-    "form-data": "^4.0.0",
-    "adm-zip": "^0.5.10"
-  },
   "engines": {
-    "node": ">=18"
+    "node": ">=20.0.0"
   },
-  "keywords": [
-    "whatsapp",
-    "baileys",
-    "bot",
-    "railway",
-    "google-drive"
-  ],
-  "author": "Glowwe",
-  "license": "MIT"
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.18",
+    "adm-zip": "^0.5.9",
+    "googleapis": "^129.0.0"
+  }
 }
