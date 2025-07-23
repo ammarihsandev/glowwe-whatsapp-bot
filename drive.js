@@ -118,6 +118,5 @@ async function uploadSession(folderPath, driveFolderId) {
     return null;
   }
 }
-console.log("🔐 Folder ID:", process.env.GOOGLE_DRIVE_FOLDER_ID);
 
 module.exports = { uploadSession, downloadSession };
