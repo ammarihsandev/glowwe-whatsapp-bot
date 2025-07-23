@@ -4,8 +4,8 @@ const path = require('path');
 const unzipper = require('unzipper');
 
 // ========== CONFIG ==========
-const DRIVE_API_KEY = 'YOUR_GOOGLE_DRIVE_API_KEY';
-const FOLDER_ID = 'YOUR_FOLDER_ID_YANG_MENGANDUNG_session.zip';
+const DRIVE_API_KEY = process.env.DRIVE_API_KEY;
+const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
 // ============================
 
 const drive = google.drive({
