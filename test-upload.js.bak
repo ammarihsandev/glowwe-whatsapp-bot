@@ -1,0 +1,3 @@
+const { uploadSession } = require('./drive');
+
+uploadSession('./auth_info', '11O6zVX_0dFU9B-cnOxvbB63jewUaQsP-'); // Ganti dengan folder ID kamu

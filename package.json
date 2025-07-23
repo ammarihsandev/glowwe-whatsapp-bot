@@ -1,0 +1,16 @@
+{
+  "name": "glowwe-whatsapp-bot",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+"@adiwajshing/baileys": "^6.3.0",
+    "adm-zip": "^0.5.16",
+    "dotenv": "^17.2.0",
+    "googleapis": "^132.0.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
