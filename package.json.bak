@@ -5,11 +5,12 @@
   "scripts": {
     "start": "node main.js"
   },
-  "dependencies": {
-  "@adiwajshing/baileys": "6.2.1",
-  "adm-zip": "^0.5.9",
+"dependencies": {
+  "@adiwajshing/baileys": "6.0.0",
   "axios": "^1.4.0",
-  "form-data": "^4.0.0"
+  "form-data": "^4.0.0",
+  "adm-zip": "^0.5.9"
 }
+
 
 }

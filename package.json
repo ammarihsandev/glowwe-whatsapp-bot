@@ -6,7 +6,7 @@
     "start": "node main.js"
   },
 "dependencies": {
-  "@adiwajshing/baileys": "6.0.0",
+  "@adiwajshing/baileys": "6.5.0",
   "axios": "^1.4.0",
   "form-data": "^4.0.0",
   "adm-zip": "^0.5.9"
